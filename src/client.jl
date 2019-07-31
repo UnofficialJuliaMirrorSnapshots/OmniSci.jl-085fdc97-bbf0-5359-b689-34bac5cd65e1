@@ -7,8 +7,8 @@ Connect to an OmniSci database.
 
 # Examples
 ```julia-repl
-julia> conn = connect("localhost", 9091, "mapd", "HyperInteractive", "mapd")
-Connected to localhost:9091
+julia> conn = connect("localhost", 6274, "mapd", "HyperInteractive", "mapd")
+Connected to localhost:6274
 ```
 """
 function connect(host::String, port::Int, user::String, passwd::String, dbname::String)
@@ -39,7 +39,7 @@ Close connection to OmniSci database.
 # Examples
 ```julia-repl
 julia> disconnect(conn)
-Connection to localhost:9091 closed
+Connection to localhost:6274 closed
 ```
 """
 function disconnect(conn::OmniSciConnection)
@@ -134,8 +134,8 @@ function get_table_details(conn::OmniSciConnection, table_name::String; as_df::B
     #makes it easier to determine column types in load_table and sql_execute
     if as_df
         df = DataFrame(r)
-        df[:col_type] = getcolumntype.(df[:col_type])
-        df[:encoding] = getencodingtype.(df[:encoding])
+        df[!, :col_type] = getcolumntype.(df.col_type)
+        df[!, :encoding] = getencodingtype.(df.encoding)
         return df
     else
         return r
@@ -371,7 +371,7 @@ load_table_binary_columnar(conn::OmniSciConnection, table_name::String, cols::Ve
 
 """
 load_table_binary_columnar(conn::OmniSciConnection, table_name::String, df::DataFrame) =
-    load_table_binary_columnar(conn, table_name, [TColumn(df[x]) for x in 1:ncol(df)])
+    load_table_binary_columnar(conn, table_name, TColumn.(eachcol(df)))
 
 """
     load_table_binary_arrow(conn::OmniSciConnection, table_name::String, arrow_stream::Vector{UInt8})
