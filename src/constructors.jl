@@ -159,8 +159,10 @@ function getsqlcoltype(x, precision::Tuple{Int, Int})
         DecFP.Dec128 => dec,
         #Decimals.jl
         Union{Decimals.Decimal, Missing} => dec,
-        Decimals.Decimal => dec
-
+        Decimals.Decimal => dec,
+        #missing: default to TEXT ENCODING DICT as design decision
+        #https://github.com/omnisci/OmniSci.jl/issues/76
+        Missing => "TEXT ENCODING DICT"
     )
 
     get(lookup, x, "Unknown")
@@ -312,6 +314,23 @@ function TColumn(x::AbstractVector{<:Union{Missing, T}}) where T <: Union{GeoInt
     #Convert geo types to string
     tcd = TColumnData()
     Thrift.set_field!(tcd, :str_col, wkt.(x))
+
+    #Complete TColumn
+    Thrift.set_field!(tc, :data, tcd)
+
+    return tc
+end
+
+#for a missing column, default to empty string column per https://github.com/omnisci/OmniSci.jl/pull/77
+function TColumn(x::AbstractVector{Missing})
+
+    #Create TColumn, fill nulls column by checking for missingness
+    tc = TColumn()
+    Thrift.set_field!(tc, :nulls, convert(Vector{Bool}, ismissing.(x)))
+
+    #Replace missing values with typed sentinel and convert to Vector{String} per API requirement
+    tcd = TColumnData()
+    Thrift.set_field!(tcd, :str_col, convert(Vector{String}, coalesce.(x, "")))
 
     #Complete TColumn
     Thrift.set_field!(tc, :data, tcd)
